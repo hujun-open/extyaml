@@ -1,4 +1,4 @@
-![Build Status](https://github.com/hujun-open/extyaml/actions/workflows/main.yml/badge.svg)
+[![CI](https://github.com/hujun-open/extyaml/actions/workflows/main.yaml/badge.svg)](https://github.com/hujun-open/extyaml/actions/workflows/main.yaml)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hujun-open/extyaml)](https://pkg.go.dev/github.com/hujun-open/extyaml)
 # overview
 extyaml is a golang module that does YAML marshaling/unmarshalling, it builds on top of [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml), to address following use case:
