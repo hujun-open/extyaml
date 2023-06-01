@@ -1,6 +1,7 @@
 package extyaml_test
 
 import (
+	"net/netip"
 	"reflect"
 	"testing"
 	"time"
@@ -25,6 +26,8 @@ type SubStruct struct {
 type ExamplStruct struct {
 	SubStruct
 	NonAnySub   SubStruct
+	AddrScalar  netip.Addr
+	AddrPointer *netip.Addr
 	TimePointer *time.Time
 	StrScalar   string
 	TimeScalar  time.Time
@@ -36,6 +39,7 @@ type ExamplStruct struct {
 func TestExtyaml(t *testing.T) {
 	extyaml.RegisterExt[time.Time](timeToStr, timeFromStr)
 	origS := &ExamplStruct{
+		AddrScalar: netip.AddrFrom4([4]byte{6, 7, 8, 9}),
 		TimeScalar: time.Date(2022, 12, 1, 1, 2, 3, 0, time.UTC),
 		TimeArray: [2]time.Time{
 			time.Date(2010, 01, 1, 1, 2, 3, 0, time.UTC),
@@ -48,6 +52,8 @@ func TestExtyaml(t *testing.T) {
 		},
 		StrScalar: "tom",
 	}
+	addr1 := netip.AddrFrom4([4]byte{3, 4, 5, 6})
+	origS.AddrPointer = &addr1
 	tt := time.Date(1111, 12, 1, 1, 2, 3, 0, time.UTC)
 	origS.TimePointer = &tt
 	tt2 := time.Date(2088, 02, 1, 1, 2, 3, 0, time.UTC)
@@ -78,6 +84,8 @@ nonanysub:
         - Wed, 01 Feb 4440 01:02:03 UTC
         - Fri, 01 Feb 4441 01:02:03 UTC
         - Sat, 01 Feb 4442 01:02:03 UTC
+addrscalar: 6.7.8.9
+addrpointer: 3.4.5.6
 timepointer: Fri, 01 Dec 1111 01:02:03 UTC
 strscalar: tom
 timescalar: Thu, 01 Dec 2022 01:02:03 UTC
@@ -102,8 +110,11 @@ timemap:
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("unmarshalled result:\n%+v", *newS)
 	if !reflect.DeepEqual(newS, origS) {
+
 		t.Fatal("unmarshaled result is different from expected value")
+
 	}
 	if newS.TimePointer != origPointer {
 		t.Fatal("pointer changed after unmarshalling")
@@ -139,13 +150,15 @@ timeslice:
 timemap:
     Sun, 01 Feb 2099 01:02:03 UTC: Sun, 01 Feb 2088 01:02:03 UTC
 timescalar: Thu, 01 Dec 2022 01:02:03 UTC
+addrscalar: 6.7.8.9
+addrpointer: 3.4.5.6
 `
 	err = extyaml.UnmarshalExt([]byte(partBuf), partS)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(partS, expectedS) {
-		t.Fatal("unmarshaled result is different from expected value")
+		t.Fatal("partial unmarshaled result is different from expected value")
 	}
 	if partS.TimePointer != origPointer {
 		t.Fatal("pointer changed after partial unmarshalling")

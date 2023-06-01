@@ -1,6 +1,7 @@
 package extyaml
 
 import (
+	"encoding"
 	"fmt"
 	"log"
 	"reflect"
@@ -28,6 +29,12 @@ func convertStructType(t reflect.Type) reflect.Type {
 		//input is a supported type
 		return RegisteredTypes.Get(GetTypeName(t)).exType
 	}
+	//check if the input has supported marshaling method
+	if t.Implements(textMarshalerInt) || t.Implements(yamlMarshalerInt) {
+
+		return t
+	}
+
 	switch t.Kind() {
 	case reflect.Array:
 		return reflect.ArrayOf(t.Len(), convertStructType(t.Elem()))
@@ -58,6 +65,13 @@ func convertStructType(t reflect.Type) reflect.Type {
 	}
 }
 
+var (
+	textMarshalerInt   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	textUnmarshalerInt = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	yamlMarshalerInt   = reflect.TypeOf((*yaml.Marshaler)(nil)).Elem()
+	yamlUnmarshalerInt = reflect.TypeOf((*yaml.Unmarshaler)(nil)).Elem()
+)
+
 // translateStructInline out = in (convert to out's type), out MUST be a pointer
 // NOTE: the tag here is for future use
 func translateStructInline(in, out any, tag reflect.StructTag, toExt bool) {
@@ -84,8 +98,14 @@ func translateStructInline(in, out any, tag reflect.StructTag, toExt bool) {
 
 	//setFunc set a=b,  b is type T, a could be either *T or **T,
 	setFunc := func(a, b reflect.Value) {
-		// fmt.Println("a", a.Interface(), "b", b.Interface())
-		// fmt.Println("a", typeToStr(a.Interface()), "b", typeToStr(b.Interface()))
+		if !b.IsValid() {
+			//if b is not valid, skip
+			return
+		}
+
+		// fmt.Println("a", a.Interface(), ",b", b.Interface())
+		// fmt.Println("a", typeToStr(a.Interface()), ",b", typeToStr(b.Interface()))
+
 		if a.Kind() == reflect.Pointer {
 			if a.Elem().Kind() == reflect.Pointer {
 				a.Elem().Elem().Set(b)
@@ -113,6 +133,23 @@ func translateStructInline(in, out any, tag reflect.StructTag, toExt bool) {
 			return
 		}
 	}
+	//check if there is supported marshaling method
+	if toExt {
+		if inT.Implements(textMarshalerInt) || inT.Implements(yamlMarshalerInt) {
+			setFunc(rV, inV)
+			return
+		}
+	} else {
+		typeToCheck := rV.Type()
+		if rV.Type().Elem().Kind() == reflect.Pointer {
+			typeToCheck = rV.Type().Elem()
+		}
+		if typeToCheck.Implements(textUnmarshalerInt) || typeToCheck.Implements(yamlUnmarshalerInt) {
+			setFunc(rV, inV)
+			return
+		}
+	}
+
 	//not a supported type
 	if inT.Kind() != reflect.Struct {
 		//not a struct
