@@ -9,6 +9,11 @@ YAML support is needed for certain type that not in your control, e.g. a struct 
 ## Usage
 Provides a `FromStr` and `ToStr` function for each to-be-support type, and register them using `RegisterExt` function in `init()`. After registration, use `MarshalExt` for marshalling and `UnmarshalExt` for unmarshalling. if the type is already supported by `gopkg.in/yaml.v3`, then the registered functions overrides `gopkg.in/yaml.v3` marshaling/unmarshalling behavior.
 
+Note: If a type implements one of following interface, it will be automatically used without need of registration:
+
+- encoding.TextMarshaler/encoding.TextUnmarshaler
+- gopkg.in/yaml.v3: Marshaler/Unmarshaler
+
 Following is an example using custom layout string for `time.Time`, this overrides `gopkg.in/yaml.v3` marshaling/unmarshalling support for `time.Time`
 
 ```
