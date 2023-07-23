@@ -1,6 +1,7 @@
 package extyaml_test
 
 import (
+	"fmt"
 	"net/netip"
 	"reflect"
 	"testing"
@@ -25,15 +26,17 @@ type SubStruct struct {
 
 type ExamplStruct struct {
 	SubStruct
-	NonAnySub   SubStruct
-	AddrScalar  netip.Addr
-	AddrPointer *netip.Addr
-	TimePointer *time.Time
-	StrScalar   string
-	TimeScalar  time.Time
-	TimeArray   [2]time.Time
-	TimeSlice   []time.Time
-	TimeMap     map[time.Time]*time.Time
+	NonAnySub        SubStruct
+	AddrScalar       netip.Addr
+	AddrPointer      *netip.Addr
+	TimePointer      *time.Time
+	StrScalar        string
+	TimeScalar       time.Time
+	TimeArray        [2]time.Time
+	TimeArrayPointer *[3]time.Time
+	TimeSlice        []time.Time
+	TimeMap          map[time.Time]*time.Time
+	ShouldSkipAddr   netip.Addr `skipyamlmarshal:""`
 }
 
 func TestExtyaml(t *testing.T) {
@@ -50,7 +53,8 @@ func TestExtyaml(t *testing.T) {
 			time.Date(2001, 03, 1, 1, 2, 3, 0, time.UTC),
 			time.Date(2001, 04, 1, 1, 2, 3, 0, time.UTC),
 		},
-		StrScalar: "tom",
+		ShouldSkipAddr: netip.AddrFrom4([4]byte{2, 3, 4, 5}),
+		StrScalar:      "tom",
 	}
 	addr1 := netip.AddrFrom4([4]byte{3, 4, 5, 6})
 	origS.AddrPointer = &addr1
@@ -70,7 +74,7 @@ func TestExtyaml(t *testing.T) {
 		*newt = time.Date(4440+i, 02, 1, 1, 2, 3, 0, time.UTC)
 		origS.NonAnySub.SubTimeSlice = append(origS.NonAnySub.SubTimeSlice, newt)
 	}
-	buf, err := extyaml.MarshalExt(origS)
+	buf, err := extyaml.MarshalExt(*origS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +96,7 @@ timescalar: Thu, 01 Dec 2022 01:02:03 UTC
 timearray:
     - Fri, 01 Jan 2010 01:02:03 UTC
     - Wed, 01 Dec 2010 01:02:03 UTC
+timearraypointer: null
 timeslice:
     - Thu, 01 Feb 2001 01:02:03 UTC
     - Thu, 01 Mar 2001 01:02:03 UTC
@@ -99,7 +104,7 @@ timeslice:
 timemap:
     Sun, 01 Feb 2099 01:02:03 UTC: Sun, 01 Feb 2088 01:02:03 UTC
 `
-	t.Log("\n" + string(buf))
+	t.Log("marshaled result:\n" + string(buf))
 	if expectResult != string(buf) {
 		t.Fatal("marshaling result is different from expcted result")
 	}
@@ -111,7 +116,7 @@ timemap:
 		t.Fatal(err)
 	}
 	t.Logf("unmarshalled result:\n%+v", *newS)
-	if !reflect.DeepEqual(newS, origS) {
+	if !deepEqual(newS, origS) {
 
 		t.Fatal("unmarshaled result is different from expected value")
 
@@ -121,7 +126,8 @@ timemap:
 	}
 	//test partial unmarshalling
 	partS := &ExamplStruct{
-		TimeScalar: time.Date(9999, 02, 1, 1, 2, 3, 0, time.UTC),
+		TimeScalar:     time.Date(9999, 02, 1, 1, 2, 3, 0, time.UTC),
+		ShouldSkipAddr: netip.AddrFrom4([4]byte{2, 3, 4, 5}),
 	}
 	tt3 := new(time.Time)
 	*tt3 = time.Date(9999, 03, 1, 1, 2, 3, 0, time.UTC)
@@ -129,6 +135,11 @@ timemap:
 	origPointer = tt3
 	expectedS := origS
 	*expectedS.TimePointer = *partS.TimePointer
+	expectedS.TimeArrayPointer = &([3]time.Time{
+		time.Date(3999, 02, 1, 1, 2, 3, 0, time.UTC),
+		time.Date(3998, 02, 1, 1, 2, 3, 0, time.UTC),
+		time.Date(3997, 02, 1, 1, 2, 3, 0, time.UTC),
+	})
 	partBuf := `substruct:
     subtimeslice:
         - Wed, 01 Feb 3330 01:02:03 UTC
@@ -143,6 +154,10 @@ strscalar: tom
 timearray:
     - Fri, 01 Jan 2010 01:02:03 UTC
     - Wed, 01 Dec 2010 01:02:03 UTC
+timearraypointer:
+    - Mon, 01 Feb 3999 01:02:03 UTC
+    - Sun, 01 Feb 3998 01:02:03 UTC
+    - Sat, 01 Feb 3997 01:02:03 UTC
 timeslice:
     - Thu, 01 Feb 2001 01:02:03 UTC
     - Thu, 01 Mar 2001 01:02:03 UTC
@@ -157,11 +172,67 @@ addrpointer: 3.4.5.6
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(partS, expectedS) {
+	if !deepEqual(partS, expectedS) {
 		t.Fatal("partial unmarshaled result is different from expected value")
+	}
+	if partS.ShouldSkipAddr.String() != netip.AddrFrom4([4]byte{2, 3, 4, 5}).String() {
+		t.Fatalf("parsed skip field is not expcted, %v", partS.ShouldSkipAddr)
 	}
 	if partS.TimePointer != origPointer {
 		t.Fatal("pointer changed after partial unmarshalling")
 	}
 
+}
+
+func deepEqual(in, expect any) bool {
+	typeIn := reflect.TypeOf(in)
+	typeExpect := reflect.TypeOf(expect)
+	valIn := reflect.ValueOf(in)
+	valExpect := reflect.ValueOf(expect)
+	// fmt.Println("in", in, typeIn, "expect", expect, typeExpect, "-"+typeIn.PkgPath()+"-")
+	if typeIn != typeExpect {
+		return false
+	}
+	if typeIn.Kind() == reflect.Pointer {
+		//compare to reflect.Value is to compare its interface()
+		if valIn.Interface() == valExpect.Interface() {
+			return true
+		}
+
+		if valIn.Elem().IsZero() && valExpect.IsNil() {
+			return true
+		}
+		valIn = valIn.Elem()
+		valExpect = valExpect.Elem()
+		typeIn = typeIn.Elem()
+	}
+
+	switch typeIn.Kind() {
+	case reflect.Struct:
+		if typeIn.PkgPath() != "github.com/hujun-open/extyaml_test" && typeIn.PkgPath() != "" {
+			return fmt.Sprint(valIn.Interface()) == fmt.Sprint(valExpect.Interface())
+		}
+		for i := 0; i < typeIn.NumField(); i++ {
+			if _, exists := typeIn.Field(i).Tag.Lookup(extyaml.SkipTag); exists {
+				continue
+			}
+			if !deepEqual(valIn.Field(i).Interface(), valExpect.Field(i).Interface()) {
+				return false
+			}
+		}
+		return true
+	case reflect.Array, reflect.Slice:
+		if valIn.Len() != valExpect.Len() {
+			return false
+		}
+		for i := 0; i < valIn.Len(); i++ {
+			if !deepEqual(valIn.Index(i).Interface(), valExpect.Index(i).Interface()) {
+				return false
+			}
+		}
+		return true
+
+	}
+	// fmt.Println(3333333333, valIn.Interface(), valExpect.Interface())
+	return reflect.DeepEqual(valIn.Interface(), valExpect.Interface())
 }

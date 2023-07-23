@@ -14,6 +14,8 @@ Note: If a type implements one of following interface, it will be automatically 
 - encoding.TextMarshaler/encoding.TextUnmarshaler
 - gopkg.in/yaml.v3: Marshaler/Unmarshaler
 
+
+
 Following is an example using custom layout string for `time.Time`, this overrides `gopkg.in/yaml.v3` marshaling/unmarshalling support for `time.Time`
 
 ```
@@ -128,6 +130,9 @@ unmarshaling result:
 partial unmarshaling result:
 &{StrScalar:init TimePointer:0001-01-01 00:00:00 +0000 UTC TimeScalar:2022-12-01 01:02:03 +0000 UTC TimeArray:[2010-01-01 01:02:03 +0000 UTC 2010-12-01 01:02:03 +0000 UTC] TimeSlice:[] TimeMap:map[]}
 ```
+
+## Field Tag
+if a struct field declaration contains a `skipyamlmarshal` tag, then it is skipped for marshalling/unmarshalling
 
 ## Included Types
 
