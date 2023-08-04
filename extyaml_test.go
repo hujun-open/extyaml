@@ -37,6 +37,7 @@ type ExamplStruct struct {
 	TimeSlice        []time.Time
 	TimeMap          map[time.Time]*time.Time
 	ShouldSkipAddr   netip.Addr `skipyamlmarshal:""`
+	MapSub           map[string]*SubStruct
 }
 
 func TestExtyaml(t *testing.T) {
@@ -55,7 +56,12 @@ func TestExtyaml(t *testing.T) {
 		},
 		ShouldSkipAddr: netip.AddrFrom4([4]byte{2, 3, 4, 5}),
 		StrScalar:      "tom",
+		MapSub: map[string]*SubStruct{"str1": &SubStruct{
+			SubTimeSlice: []*time.Time{},
+		}},
 	}
+	tt99 := time.Date(1112, 12, 1, 1, 2, 3, 0, time.UTC)
+	origS.MapSub["str1"].SubTimeSlice = append(origS.MapSub["str1"].SubTimeSlice, &tt99)
 	addr1 := netip.AddrFrom4([4]byte{3, 4, 5, 6})
 	origS.AddrPointer = &addr1
 	tt := time.Date(1111, 12, 1, 1, 2, 3, 0, time.UTC)
@@ -103,6 +109,10 @@ timeslice:
     - Sun, 01 Apr 2001 01:02:03 UTC
 timemap:
     Sun, 01 Feb 2099 01:02:03 UTC: Sun, 01 Feb 2088 01:02:03 UTC
+mapsub:
+    str1:
+        subtimeslice:
+            - Sun, 01 Dec 1112 01:02:03 UTC
 `
 	t.Log("marshaled result:\n" + string(buf))
 	if expectResult != string(buf) {
@@ -167,11 +177,16 @@ timemap:
 timescalar: Thu, 01 Dec 2022 01:02:03 UTC
 addrscalar: 6.7.8.9
 addrpointer: 3.4.5.6
+mapsub:
+    str1:
+        subtimeslice:
+            - Sun, 01 Dec 1112 01:02:03 UTC
 `
 	err = extyaml.UnmarshalExt([]byte(partBuf), partS)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("partial unmarshaled result:\n%+v", *partS)
 	if !deepEqual(partS, expectedS) {
 		t.Fatal("partial unmarshaled result is different from expected value")
 	}

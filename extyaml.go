@@ -252,11 +252,12 @@ func translateStructInline(in, out any, tag reflect.StructTag, toExt bool) {
 		}
 	} else {
 		//t is a struct
-		if rV.Kind() == reflect.Pointer {
+		for rV.Kind() == reflect.Pointer {
 			rV = rV.Elem()
 		}
 
 		for i := 0; i < inT.NumField(); i++ {
+			// fmt.Println("waling field", inT.Field(i).Name)
 			if !inT.Field(i).IsExported() {
 				continue
 			}
@@ -295,8 +296,12 @@ func UnmarshalExt(buf []byte, out any) error {
 
 // MarshalExt marshal in into YAML bytes
 func MarshalExt(in any) ([]byte, error) {
-	newType := convertStructType(reflect.TypeOf(in))
+	inV := reflect.ValueOf(in)
+	if inV.Kind() == reflect.Pointer {
+		inV = inV.Elem()
+	}
+	newType := convertStructType(reflect.TypeOf(inV.Interface()))
 	newVal := reflect.New(newType)
-	translateStructInline(in, newVal.Interface(), "", true)
+	translateStructInline(inV.Interface(), newVal.Interface(), "", true)
 	return yaml.Marshal(newVal.Interface())
 }
