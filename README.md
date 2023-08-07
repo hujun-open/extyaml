@@ -132,7 +132,7 @@ partial unmarshaling result:
 ```
 
 ## Field Tag
-if a struct field declaration contains a `skipyamlmarshal` tag, then it is skipped for marshalling/unmarshalling
+if a struct field declaration contains a `skipyamlmarshal` tag, then it is skipped for marshalling/unmarshalling, even if it is a exported field.
 
 ## Included Types
 

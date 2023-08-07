@@ -35,6 +35,7 @@ type ExamplStruct struct {
 	TimeArray        [2]time.Time
 	TimeArrayPointer *[3]time.Time
 	TimeSlice        []time.Time
+	SlicePtrSub      []*SubStruct
 	TimeMap          map[time.Time]*time.Time
 	ShouldSkipAddr   netip.Addr `skipyamlmarshal:""`
 	MapSub           map[string]*SubStruct
@@ -56,12 +57,20 @@ func TestExtyaml(t *testing.T) {
 		},
 		ShouldSkipAddr: netip.AddrFrom4([4]byte{2, 3, 4, 5}),
 		StrScalar:      "tom",
+		SlicePtrSub: []*SubStruct{
+			&SubStruct{
+				SubTimeSlice: []*time.Time{},
+			},
+		},
 		MapSub: map[string]*SubStruct{"str1": &SubStruct{
 			SubTimeSlice: []*time.Time{},
 		}},
 	}
+
 	tt99 := time.Date(1112, 12, 1, 1, 2, 3, 0, time.UTC)
 	origS.MapSub["str1"].SubTimeSlice = append(origS.MapSub["str1"].SubTimeSlice, &tt99)
+	tt100 := time.Date(1113, 12, 1, 1, 2, 3, 0, time.UTC)
+	origS.SlicePtrSub[0].SubTimeSlice = append(origS.SlicePtrSub[0].SubTimeSlice, &tt100)
 	addr1 := netip.AddrFrom4([4]byte{3, 4, 5, 6})
 	origS.AddrPointer = &addr1
 	tt := time.Date(1111, 12, 1, 1, 2, 3, 0, time.UTC)
@@ -107,6 +116,9 @@ timeslice:
     - Thu, 01 Feb 2001 01:02:03 UTC
     - Thu, 01 Mar 2001 01:02:03 UTC
     - Sun, 01 Apr 2001 01:02:03 UTC
+sliceptrsub:
+    - subtimeslice:
+        - Mon, 01 Dec 1113 01:02:03 UTC
 timemap:
     Sun, 01 Feb 2099 01:02:03 UTC: Sun, 01 Feb 2088 01:02:03 UTC
 mapsub:
@@ -172,6 +184,9 @@ timeslice:
     - Thu, 01 Feb 2001 01:02:03 UTC
     - Thu, 01 Mar 2001 01:02:03 UTC
     - Sun, 01 Apr 2001 01:02:03 UTC
+sliceptrsub:
+    - subtimeslice:
+        - Mon, 01 Dec 1113 01:02:03 UTC	
 timemap:
     Sun, 01 Feb 2099 01:02:03 UTC: Sun, 01 Feb 2088 01:02:03 UTC
 timescalar: Thu, 01 Dec 2022 01:02:03 UTC
