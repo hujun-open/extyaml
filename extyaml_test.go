@@ -24,7 +24,7 @@ type SubStruct struct {
 	SubTimeSlice []*time.Time
 }
 
-type ExamplStruct struct {
+type ExampleStruct struct {
 	SubStruct
 	NonAnySub        SubStruct
 	AddrScalar       netip.Addr
@@ -43,7 +43,7 @@ type ExamplStruct struct {
 
 func TestExtyaml(t *testing.T) {
 	extyaml.RegisterExt[time.Time](timeToStr, timeFromStr)
-	origS := &ExamplStruct{
+	origS := &ExampleStruct{
 		AddrScalar: netip.AddrFrom4([4]byte{6, 7, 8, 9}),
 		TimeScalar: time.Date(2022, 12, 1, 1, 2, 3, 0, time.UTC),
 		TimeArray: [2]time.Time{
@@ -130,7 +130,7 @@ mapsub:
 	if expectResult != string(buf) {
 		t.Fatal("marshaling result is different from expcted result")
 	}
-	newS := new(ExamplStruct)
+	newS := new(ExampleStruct)
 	origPointer := new(time.Time)
 	newS.TimePointer = origPointer
 	err = extyaml.UnmarshalExt(buf, newS)
@@ -147,7 +147,7 @@ mapsub:
 		t.Fatal("pointer changed after unmarshalling")
 	}
 	//test partial unmarshalling
-	partS := &ExamplStruct{
+	partS := &ExampleStruct{
 		TimeScalar:     time.Date(9999, 02, 1, 1, 2, 3, 0, time.UTC),
 		ShouldSkipAddr: netip.AddrFrom4([4]byte{2, 3, 4, 5}),
 	}

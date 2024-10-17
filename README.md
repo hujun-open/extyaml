@@ -134,6 +134,43 @@ partial unmarshaling result:
 ## Field Tag
 if a struct field declaration contains a `skipyamlmarshal` tag, then it is skipped for marshalling/unmarshalling, even if it is a exported field.
 
+## Skip default value with MarshalExtDefault
+function `MarshalExtDefault` marshal output skips fields that has same value as the specified default value;
+following is an example:
+```
+package main
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/hujun-open/extyaml"
+)
+
+type Foo struct {
+	Name     string
+	Interval time.Duration
+}
+
+func main() {
+	defaultVal := Foo{
+		Interval: time.Second * 30,
+	}
+	inputVal := Foo{
+		Name:     "example",
+		Interval: time.Second * 30, //same as defaultVal, skipped in output
+	}
+	buf, err := extyaml.MarshalExtDefault(inputVal, defaultVal)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(buf))
+}
+```
+The output is:
+```
+name: example
+```
 ## Included Types
 
 This module also include support for following types:
