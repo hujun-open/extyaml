@@ -27,6 +27,10 @@ func addSkipTag(in, def reflect.Value) reflect.Type {
 			Tag:     field.Tag,
 			Index:   field.Index,
 		}
+		//inT is anonymous type like an ebeded struct
+		if newField.PkgPath == "" {
+			newField.PkgPath = "anonymous"
+		}
 
 		if !field.IsExported() {
 			//a non-export field
