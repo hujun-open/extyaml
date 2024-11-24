@@ -1,19 +1,54 @@
 package extyaml_test
 
 import (
+	"bytes"
 	"fmt"
-	"net/netip"
 	"testing"
 	"time"
 
 	"github.com/hujun-open/extyaml"
 )
 
+func compareStrs(str1, str2 string) error {
+	if len(str1) != len(str2) {
+		return fmt.Errorf("1st string is %d, while 2nd string is %d", len(str1), len(str2))
+	}
+	cmpstr := ""
+	for i := 0; i < len(str1); i++ {
+		if str1[i] != str2[i] {
+			cmpstr += fmt.Sprintf("%d char is different, %c vs %c\n", i, str1[i], str2[i])
+		}
+	}
+	if cmpstr != "" {
+		return fmt.Errorf("diff: %v", cmpstr)
+	}
+	return nil
+}
+
+type Substract2 struct {
+	At time.Time
+}
+
+type example2 struct {
+	TimeScalar time.Time
+	noExported int
+	IsBool     bool
+	Sub1       struct {
+		Sub1int int
+		noSub1  string
+	}
+	Sub2 Substract2
+	Substract2
+	IntSlice  []int
+	TimeSlice []time.Time
+	TimeArray [2]time.Time
+}
+
 func TestMarshalDefault(t *testing.T) {
 	extyaml.RegisterExt[time.Time](timeToStr, timeFromStr)
 	type testCase struct {
-		Input      ExampleStruct
-		Default    ExampleStruct
+		Input      example2
+		Default    example2
 		ExpectedRS string
 	}
 
@@ -22,64 +57,112 @@ func TestMarshalDefault(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		t.Log(string(buf))
 		if string(buf) != c.ExpectedRS {
 			t.Log(c.ExpectedRS)
-			return fmt.Errorf("expected result is different ")
+			fmt.Println(compareStrs(c.ExpectedRS, string(buf)))
+			return fmt.Errorf("expected marshal result %v is different from actual running result %v ", c.ExpectedRS, string(buf))
 		}
+		t.Log(string(buf))
+		newval := c.Default
+		err = extyaml.UnmarshalExt(buf, &newval)
+		if err != nil {
+			return err
+		}
+		inputBuf, err := extyaml.MarshalExt(c.Input)
+		if err != nil {
+			return fmt.Errorf("failed to marhsal input, %w", err)
+		}
+		newBuf, err := extyaml.MarshalExt(newval)
+		if err != nil {
+			return fmt.Errorf("failed to marhsal unmarshaled variable, %w", err)
+		}
+		if !bytes.Equal(inputBuf, newBuf) {
+			return fmt.Errorf("unmarshaled variable is not equal to input")
+		}
+
 		return nil
 	}
 	caseList := []testCase{
 		{
-			Input: ExampleStruct{
-				SubStruct: SubStruct{
-					SubTimeSlice: []*time.Time{},
-				},
-				NonAnySub: SubStruct{
-					SubTimeSlice: []*time.Time{},
-				},
-				AddrScalar: netip.MustParseAddr("1.1.1.1"),
+			Input: example2{
 				TimeScalar: time.Date(2022, 12, 1, 1, 2, 3, 0, time.UTC),
+				IsBool:     true,
+				Sub1: struct {
+					Sub1int int
+					noSub1  string
+				}{Sub1int: 10, noSub1: "xixi"},
+				TimeSlice: []time.Time{
+					time.Date(2020, 12, 1, 1, 2, 3, 0, time.UTC),
+					time.Date(2021, 12, 1, 1, 2, 3, 0, time.UTC),
+				},
 				TimeArray: [2]time.Time{
-					time.Date(2010, 01, 1, 1, 2, 3, 0, time.UTC),
-					time.Date(2010, 12, 1, 1, 2, 3, 0, time.UTC),
+					time.Date(2020, 12, 1, 1, 2, 3, 0, time.UTC),
+					time.Date(2021, 12, 1, 1, 2, 3, 0, time.UTC),
 				},
-				TimeSlice: []time.Time{
-					time.Date(2001, 02, 1, 1, 2, 3, 0, time.UTC),
-					time.Date(2001, 03, 1, 1, 2, 3, 0, time.UTC),
-					time.Date(2001, 04, 1, 1, 2, 3, 0, time.UTC),
+				Sub2: Substract2{
+					At: time.Date(2033, 12, 1, 1, 2, 3, 0, time.UTC),
 				},
-				ShouldSkipAddr: netip.AddrFrom4([4]byte{2, 3, 4, 5}),
-				StrScalar:      "tom",
-				SlicePtrSub: []*SubStruct{
-					&SubStruct{
-						SubTimeSlice: []*time.Time{},
-					},
-				},
-				MapSub: map[string]*SubStruct{"str1": &SubStruct{
-					SubTimeSlice: []*time.Time{},
-				}},
 			},
-			Default: ExampleStruct{
-				AddrScalar: netip.MustParseAddr("1.1.1.1"),
+			Default: example2{
 				TimeScalar: time.Date(2022, 12, 1, 1, 2, 3, 0, time.UTC),
+				IsBool:     true,
 				TimeSlice: []time.Time{
-					time.Date(2001, 02, 1, 1, 2, 3, 0, time.UTC),
-					time.Date(2001, 03, 1, 1, 2, 3, 0, time.UTC),
-					time.Date(2001, 04, 1, 1, 2, 3, 0, time.UTC),
+					time.Date(2020, 12, 1, 1, 2, 3, 0, time.UTC),
+					time.Date(2021, 12, 1, 1, 2, 3, 0, time.UTC),
+				},
+				TimeArray: [2]time.Time{
+					time.Date(2020, 12, 1, 1, 2, 3, 0, time.UTC),
+					time.Date(2021, 12, 1, 1, 2, 3, 0, time.UTC),
+				},
+				Sub2: Substract2{
+					At: time.Date(2033, 12, 1, 1, 2, 3, 0, time.UTC),
 				},
 			},
-			ExpectedRS: `substruct: {}
-nonanysub: {}
-strscalar: tom
-timearray:
-    - Fri, 01 Jan 2010 01:02:03 UTC
-    - Wed, 01 Dec 2010 01:02:03 UTC
-sliceptrsub:
-    - subtimeslice: []
-mapsub:
-    str1:
-        subtimeslice: []
+			ExpectedRS: `sub1:
+    sub1int: 10
+sub2: {}
+substract2: {}
+`,
+		},
+		//testing bool both true
+		{
+			Input: example2{
+				IsBool: true,
+			},
+			Default: example2{
+				IsBool: true,
+			},
+			ExpectedRS: `sub1: {}
+sub2: {}
+substract2: {}
+`,
+		},
+		//testing bool case 1
+		{
+			Input: example2{
+				IsBool: true,
+			},
+			Default: example2{
+				IsBool: false,
+			},
+			ExpectedRS: `isbool: true
+sub1: {}
+sub2: {}
+substract2: {}
+`,
+		},
+		//testing bool case 2
+		{
+			Input: example2{
+				IsBool: false,
+			},
+			Default: example2{
+				IsBool: true,
+			},
+			ExpectedRS: `isbool: false
+sub1: {}
+sub2: {}
+substract2: {}
 `,
 		},
 	}

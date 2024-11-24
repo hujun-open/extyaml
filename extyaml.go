@@ -69,6 +69,7 @@ func convertStructType(t reflect.Type) reflect.Type {
 		var list = []reflect.StructField{}
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
+			// fmt.Printf("======%v anonymous %v isexport %v, %v\n", field.Name, field.Anonymous, field.IsExported(), field.PkgPath)
 			if !field.IsExported() {
 				//a non-export field
 				list = append(list, field)
@@ -86,6 +87,10 @@ func convertStructType(t reflect.Type) reflect.Type {
 				})
 				continue
 			}
+			// pkgPath := field.PkgPath
+			// if field.Anonymous {
+			// 	pkgPath = t.PkgPath()
+			// }
 			list = append(list, reflect.StructField{
 				Name:    field.Name,
 				Type:    convertStructType(field.Type),

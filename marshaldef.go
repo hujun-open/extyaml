@@ -3,6 +3,7 @@ package extyaml
 import (
 	"fmt"
 	"reflect"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 )
@@ -32,8 +33,16 @@ func addSkipTag(in, def reflect.Value) reflect.Type {
 			newField.PkgPath = "anonymous"
 		}
 
+		if unicode.IsLower([]rune(newField.Name)[0]) {
+			//first char is lower case, no exported field
+			newField.Tag += reflect.StructTag(fmt.Sprintf(` %v:" "`, SkipTag))
+			list = append(list, newField)
+			continue
+		}
+
 		if !field.IsExported() {
 			//a non-export field
+			newField.Tag += reflect.StructTag(fmt.Sprintf(` %v:" "`, SkipTag))
 			list = append(list, newField)
 			continue
 		}
@@ -99,7 +108,7 @@ func addSkipTag(in, def reflect.Value) reflect.Type {
 			}
 		}
 
-		if fieldType.Kind() != reflect.Struct || (fieldType.Implements(textMarshalerInt) || field.Type.Implements(yamlMarshalerInt)) {
+		if fieldType.Kind() != reflect.Struct || (fieldType.Implements(textMarshalerInt) || field.Type.Implements(yamlMarshalerInt)) || RegisteredTypes.isSupportedType(fieldType, true) {
 			// not struct OR struct but implement marshal interface
 			if reflect.DeepEqual(inFieldVal.Interface(), defFieldVal.Interface()) {
 				//same value
@@ -116,6 +125,7 @@ func addSkipTag(in, def reflect.Value) reflect.Type {
 		} else {
 			//struct and it doesn't implment marshal interface
 			if fieldType.Kind() == reflect.Struct {
+
 				list = append(list, reflect.StructField{
 					Name: field.Name,
 					Type: addSkipTag(inFieldVal, defFieldVal),

@@ -1,9 +1,10 @@
 [![CI](https://github.com/hujun-open/extyaml/actions/workflows/main.yaml/badge.svg)](https://github.com/hujun-open/extyaml/actions/workflows/main.yaml)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hujun-open/extyaml)](https://pkg.go.dev/github.com/hujun-open/extyaml)
 # overview
-extyaml is a golang module that does YAML marshaling/unmarshalling, it builds on top of [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml), to address following use case:
+extyaml is a golang module that does YAML marshaling/unmarshalling, it builds on top of [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml), to address following use cases:
 
-YAML support is needed for certain type that not in your control, e.g. a struct in a 3rd party module, but you don't want to create an alias type to add YAML support since that require changing the existing code to use this new type. 
+- YAML support is needed for certain type that not in your control, e.g. a struct in a 3rd party module, but you don't want to create an alias type to add YAML support since that require changing the existing code to use this new type. 
+- Marshal result ignore struct fields that has default value, the default value is specified via an input struct
 
 
 ## Usage
