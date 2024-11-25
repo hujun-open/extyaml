@@ -120,8 +120,6 @@ func TestMarshalDefault(t *testing.T) {
 			},
 			ExpectedRS: `sub1:
     sub1int: 10
-sub2: {}
-substract2: {}
 `,
 		},
 		//testing bool both true
@@ -132,9 +130,7 @@ substract2: {}
 			Default: example2{
 				IsBool: true,
 			},
-			ExpectedRS: `sub1: {}
-sub2: {}
-substract2: {}
+			ExpectedRS: `{}
 `,
 		},
 		//testing bool case 1
@@ -146,9 +142,6 @@ substract2: {}
 				IsBool: false,
 			},
 			ExpectedRS: `isbool: true
-sub1: {}
-sub2: {}
-substract2: {}
 `,
 		},
 		//testing bool case 2
@@ -160,9 +153,6 @@ substract2: {}
 				IsBool: true,
 			},
 			ExpectedRS: `isbool: false
-sub1: {}
-sub2: {}
-substract2: {}
 `,
 		},
 	}

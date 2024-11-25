@@ -1,6 +1,7 @@
 package extyaml
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"unicode"
@@ -10,6 +11,7 @@ import (
 
 // addSkipTag add SkipTag for the field that has equal value between in and def
 // note: exported field pkgpath must be "", while unexported field pkgpath can't be ""
+// note2: if there the type is slice/arrary/map, and there some elements in them are same while others are different (e.g. a slice S, which S[0] is same, but others are different), then this function can't mark the whole element as skip since there are some elements are same value
 func addSkipTag(in, def reflect.Value) reflect.Type {
 	inT := in.Type()
 	if inT.Kind() == reflect.Pointer {
@@ -107,6 +109,21 @@ func addSkipTag(in, def reflect.Value) reflect.Type {
 				continue
 			}
 		}
+		//check  if equal using marshalext
+		inbuf, err := MarshalExt(inFieldVal.Interface())
+		if err != nil {
+			panic(err)
+		}
+		defbuf, err := MarshalExt(defFieldVal.Interface())
+		if err != nil {
+			panic(err)
+		}
+		if bytes.Equal(inbuf, defbuf) {
+			newField.Tag += reflect.StructTag(fmt.Sprintf(` %v:" "`, SkipTag))
+			list = append(list, newField)
+			continue
+		}
+		//this where marshalext result is not equal
 
 		if fieldType.Kind() != reflect.Struct || (fieldType.Implements(textMarshalerInt) || field.Type.Implements(yamlMarshalerInt)) || RegisteredTypes.isSupportedType(fieldType, true) {
 			// not struct OR struct but implement marshal interface
@@ -123,7 +140,7 @@ func addSkipTag(in, def reflect.Value) reflect.Type {
 			}
 
 		} else {
-			//struct and it doesn't implment marshal interface
+			//struct and it doesn't implement marshal interface
 			if fieldType.Kind() == reflect.Struct {
 
 				list = append(list, reflect.StructField{

@@ -172,6 +172,8 @@ The output is:
 ```
 name: example
 ```
+
+Limitation: if there are different element in slice/arrary/map, even same elements are not skipped
 ## Included Types
 
 This module also include support for following types:
