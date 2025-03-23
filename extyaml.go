@@ -282,7 +282,13 @@ func translateStructInline(in, out any, tag reflect.StructTag, toExt bool) {
 	}
 }
 
-// UnmarshalExt unmarshal YAML bytes buf into out, out must be a pointer
+// UnmarshalExt will call PostUnmarshal() at the end of UnmarshalExt() process
+type PostUnmarshal interface {
+	PostUnmarshal() error
+}
+
+// UnmarshalExt unmarshal YAML bytes buf into out, out must be a pointer.
+// out.PostUnmarshal() gets called at the end if out implements PostUnmarshal interface
 func UnmarshalExt(buf []byte, out any) error {
 	if reflect.TypeOf(out).Kind() != reflect.Pointer {
 		return fmt.Errorf("the object unmarhsal into is not a pointer")
@@ -296,6 +302,9 @@ func UnmarshalExt(buf []byte, out any) error {
 		return err
 	}
 	translateStructInline(extVal.Interface(), out, "", false)
+	if newout, ok := out.(PostUnmarshal); ok {
+		return newout.PostUnmarshal()
+	}
 	return nil
 }
 
