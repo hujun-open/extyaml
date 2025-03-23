@@ -135,6 +135,9 @@ partial unmarshaling result:
 ## Field Tag
 if a struct field declaration contains a `skipyamlmarshal` tag, then it is skipped for marshalling/unmarshalling, even if it is a exported field.
 
+## Post Unmarshal
+if the input type implements `PostUnmarshal` interface, then its method gets called at the end of `UnmarshalExt()`; which could be used for e.g. checking the unmarshalled value. 
+
 ## Skip default value with MarshalExtDefault
 function `MarshalExtDefault` marshal output skips fields that has same value as the specified default value;
 following is an example:
